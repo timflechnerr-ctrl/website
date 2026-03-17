@@ -1,10 +1,10 @@
 /* ═══════════════════════════════════════════
-   animations.js — Scroll Reveal & Skill Bars
+   animations.js — Scroll Reveal, Parallax & Hero FX
 ═══════════════════════════════════════════ */
 
 'use strict';
 
-/* ── Intersection Observer: Reveal on scroll ── */
+/* ── Bidirectional Reveal on scroll (in + out) ── */
 (function initReveal() {
   const revealEls = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
   if (!revealEls.length) return;
@@ -14,7 +14,12 @@
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           entry.target.classList.add('visible');
-          observer.unobserve(entry.target);
+        } else {
+          /* Only un-reveal if element has scrolled out from the top (already passed) */
+          const rect = entry.target.getBoundingClientRect();
+          if (rect.bottom < 0) {
+            entry.target.classList.remove('visible');
+          }
         }
       });
     },
@@ -25,7 +30,7 @@
 })();
 
 
-/* ── Skill Bars — animate width on scroll ── */
+/* ── Skill Bars — animate width on scroll (one-time) ── */
 (function initSkillBars() {
   const fills = document.querySelectorAll('.skill-fill');
   if (!fills.length) return;
@@ -48,10 +53,11 @@
 })();
 
 
-/* ── Section background parallax subtle shift ── */
-(function initParallax() {
-  const hero = document.getElementById('hero');
-  if (!hero) return;
+/* ── Hero scroll-out animation ── */
+(function initHeroScrollFX() {
+  const heroContent = document.querySelector('.hero-content');
+  const canvas      = document.getElementById('particleCanvas');
+  if (!heroContent) return;
 
   let ticking = false;
 
@@ -59,11 +65,29 @@
     if (!ticking) {
       requestAnimationFrame(() => {
         const scrolled = window.scrollY;
-        const canvas = document.getElementById('particleCanvas');
-        // Very subtle parallax on canvas — stays within hero bounds
-        if (canvas && scrolled < window.innerHeight) {
-          canvas.style.transform = `translateY(${scrolled * 0.15}px)`;
+        const vh       = window.innerHeight;
+
+        if (scrolled < vh) {
+          const progress = scrolled / vh;
+
+          /* Fade + slide up + slight scale down */
+          const opacity    = 1 - progress * 1.6;
+          const translateY = scrolled * 0.35;
+          const scale      = 1 - progress * 0.08;
+
+          heroContent.style.opacity   = Math.max(0, opacity);
+          heroContent.style.transform = `translateY(-${translateY}px) scale(${scale})`;
+
+          if (canvas) {
+            canvas.style.transform = `translateY(${scrolled * 0.15}px)`;
+            canvas.style.opacity   = String(Math.max(0.2, 1 - progress * 0.7));
+          }
+        } else {
+          heroContent.style.opacity   = '0';
+          heroContent.style.transform = '';
+          if (canvas) { canvas.style.opacity = '0'; canvas.style.transform = ''; }
         }
+
         ticking = false;
       });
       ticking = true;
@@ -118,3 +142,4 @@
 
   pcts.forEach((el) => observer.observe(el));
 })();
+
